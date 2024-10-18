@@ -10,6 +10,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { X } from 'lucide-react'
 import { toast } from "@/components/ui/use-toast"
 
+type Heir = {
+  id: string;
+  relationship: string;
+  count: number;
+}
+
 export const FaraidCalculator = () => {
   const [assets, setAssets] = useState<number | ''>('')
   const [heirs, setHeirs] = useState<Heir[]>([])
