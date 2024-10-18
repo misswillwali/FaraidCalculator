@@ -10,11 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { X } from 'lucide-react'
 import { toast } from "@/components/ui/use-toast"
 
-export const FaraidCalculator_v1 = () => {
+export const FaraidCalculator = () => {
   const [assets, setAssets] = useState<number | ''>('')
   const [heirs, setHeirs] = useState<Heir[]>([])
-  const [newMaleHeir, setNewMaleHeir] = useState<Omit<Heir, 'id'>>({ relationship: '', count: 1 })
-  const [newFemaleHeir, setNewFemaleHeir] = useState<Omit<Heir, 'id'>>({ relationship: '', count: 1 })
+  const [newMaleHeir, setNewMaleHeir] = useState<Omit<Heir, 'id'> & { key: number }>({ relationship: '', count: 1, key: 0 })
+  const [newFemaleHeir, setNewFemaleHeir] = useState<Omit<Heir, 'id'> & { key: number }>({ relationship: '', count: 1, key: 0 })
   const [shares, setShares] = useState<{[key: string]: number}>({})
   const [email, setEmail] = useState<string>('')
   const [assetsError, setAssetsError] = useState<string>('')
@@ -25,7 +25,7 @@ export const FaraidCalculator_v1 = () => {
     { value: "husband", label: "Husband" },
     { value: "grandson", label: "Grandson" },
     { value: "father", label: "Father" },
-    { value: "paternalGrandfather", label: "Paternal Grandfather" },
+    { value: "paternalGrandFather", label: "Paternal Grandfather" },
     { value: "brother", label: "Brother" },
     { value: "halfBrotherSameFather", label: "Half Brother (by same father)" },
     { value: "halfBrotherSameMother", label: "Half Brother (by same mother)" },
@@ -45,7 +45,7 @@ export const FaraidCalculator_v1 = () => {
     { value: "granddaughter", label: "Grand-daughter (son's daughter)" },
     { value: "mother", label: "Mother" },
     { value: "maternalGrandmother", label: "Maternal grandmother" },
-    { value: "paternalGrandmother", label: "Paternal grandmother" },
+    { value: "paternalGrandMother", label: "Paternal grandmother" },
     { value: "halfSisterSameFather", label: "Half Sister (by same father)" },
     { value: "halfSisterSameMother", label: "Half Sister (by same mother)" },
   ]
@@ -54,17 +54,34 @@ export const FaraidCalculator_v1 = () => {
   const addHeir = (heir: Omit<Heir, 'id'>) => {
     if (heir.relationship) {
       const id = Date.now().toString()
-      setHeirs([...heirs, { ...heir, id }])
+      const updatedHeirs = [...heirs, { ...heir, id }]
+      setHeirs(updatedHeirs)
+      if (maleHeirs.some(maleHeir => maleHeir.value === heir.relationship)) {
+        setNewMaleHeir(prev => ({ relationship: '', count: 1, key: prev.key + 1 }))
+      } else {
+        setNewFemaleHeir(prev => ({ relationship: '', count: 1, key: prev.key + 1 }))
+      }
+      if (Object.keys(shares).length > 0) {
+        calculateShares(updatedHeirs)
+      }
     }
   }
 
   // Method to remove an heir from the list
   const removeHeir = (id: string) => {
-    setHeirs(heirs.filter(heir => heir.id !== id))
+    setHeirs(prevHeirs => {
+      const updatedHeirs = prevHeirs.filter(heir => heir.id !== id);
+      if (Object.keys(shares).length > 0) {
+        calculateShares(updatedHeirs);
+      }
+      return updatedHeirs;
+    });
+    setNewMaleHeir(prev => ({ relationship: '', count: 1, key: prev.key + 1 }));
+    setNewFemaleHeir(prev => ({ relationship: '', count: 1, key: prev.key + 1 }));
   }
 
   // Method to calculate inheritance shares
-  const calculateShares = () => {
+  const calculateShares = (currentHeirs = heirs) => {
     // Validate total assets input
     if (assets === '' || assets <= 0) {
       setAssetsError('Please enter a valid total assets amount')
@@ -76,54 +93,54 @@ export const FaraidCalculator_v1 = () => {
     const calculatedShares: {[key: string]: number} = {}
 
     // Allocate fixed shares first
-    heirs.forEach(heir => {
+    currentHeirs.forEach(heir => {
       let share = 0
       switch (heir.relationship) {
         case 'husband':
-          share = heirs.some(h => ['son', 'daughter', 'grandson', 'granddaughter'].includes(h.relationship)) ? 1/4 : 1/2
+          share = currentHeirs.some(h => ['son', 'daughter', 'grandson', 'granddaughter'].includes(h.relationship)) ? 1/4 : 1/2
           break
         case 'wife':
-          share = heirs.some(h => ['son', 'daughter', 'grandson', 'granddaughter'].includes(h.relationship)) ? 1/8 : 1/4
+          share = currentHeirs.some(h => ['son', 'daughter', 'grandson', 'granddaughter'].includes(h.relationship)) ? 1/8 : 1/4
           share *= heir.count // Adjust for multiple wives
           break
         case 'father':
-          share = heirs.some(h => ['son', 'daughter', 'grandson', 'granddaughter'].includes(h.relationship)) ? 1/6 : 0 // Will get residuary later if no descendants
+          share = currentHeirs.some(h => ['son', 'daughter', 'grandson', 'granddaughter'].includes(h.relationship)) ? 1/6 : 0 // Will get residuary later if no descendants
           break
         case 'mother':
-          if (heirs.some(h => ['son', 'daughter', 'grandson', 'granddaughter'].includes(h.relationship))) {
+          if (currentHeirs.some(h => ['son', 'daughter', 'grandson', 'granddaughter'].includes(h.relationship))) {
             share = 1/6
-          } else if (heirs.filter(h => ['brother', 'sister', 'halfBrotherSameFather', 'halfBrotherSameMother', 'halfSisterSameFather', 'halfSisterSameMother'].includes(h.relationship)).length >= 2) {
+          } else if (currentHeirs.filter(h => ['brother', 'sister', 'halfBrotherSameFather', 'halfBrotherSameMother', 'halfSisterSameFather', 'halfSisterSameMother'].includes(h.relationship)).length >= 2) {
             share = 1/6
           } else {
             share = 1/3
           }
           break
         case 'daughter':
-          if (!heirs.some(h => h.relationship === 'son')) {
+          if (!currentHeirs.some(h => h.relationship === 'son')) {
             share = heir.count === 1 ? 1/2 : 2/3
           }
           break
         case 'granddaughter':
-          if (!heirs.some(h => ['son', 'daughter'].includes(h.relationship))) {
+          if (!currentHeirs.some(h => ['son', 'daughter'].includes(h.relationship))) {
             share = heir.count === 1 ? 1/2 : 2/3
-          } else if (heirs.some(h => h.relationship === 'daughter') && !heirs.some(h => h.relationship === 'son')) {
+          } else if (currentHeirs.some(h => h.relationship === 'daughter') && !currentHeirs.some(h => h.relationship === 'son')) {
             share = 1/6
           }
           break
         case 'sister':
-          if (!heirs.some(h => ['son', 'daughter', 'grandson', 'granddaughter', 'father', 'brother'].includes(h.relationship))) {
+          if (!currentHeirs.some(h => ['son', 'daughter', 'grandson', 'granddaughter', 'father', 'brother'].includes(h.relationship))) {
             share = heir.count === 1 ? 1/2 : 2/3
           }
           break
         case 'halfSisterSameFather':
-          if (!heirs.some(h => ['son', 'daughter', 'grandson', 'granddaughter', 'father', 'brother', 'sister'].includes(h.relationship))) {
+          if (!currentHeirs.some(h => ['son', 'daughter', 'grandson', 'granddaughter', 'father', 'brother', 'sister'].includes(h.relationship))) {
             share = heir.count === 1 ? 1/2 : 2/3
           }
           break
         case 'halfBrotherSameMother':
         case 'halfSisterSameMother':
-          if (!heirs.some(h => ['son', 'daughter', 'grandson', 'granddaughter', 'father', 'paternalGrandfather'].includes(h.relationship))) {
-            const totalUterineCount = heirs.filter(h => ['halfBrotherSameMother', 'halfSisterSameMother'].includes(h.relationship)).reduce((sum, h) => sum + h.count, 0)
+          if (!currentHeirs.some(h => ['son', 'daughter', 'grandson', 'granddaughter', 'father', 'paternalGrandFather'].includes(h.relationship))) {
+            const totalUterineCount = currentHeirs.filter(h => ['halfBrotherSameMother', 'halfSisterSameMother'].includes(h.relationship)).reduce((sum, h) => sum + h.count, 0)
             share = totalUterineCount === 1 ? 1/6 : 1/3
             share /= totalUterineCount // Divide equally among uterine siblings
           }
@@ -136,8 +153,8 @@ export const FaraidCalculator_v1 = () => {
     })
 
     // Distribute remaining share among residuary heirs
-    const residuaryHeirs = heirs.filter(heir => 
-      ['son', 'grandson', 'father', 'paternalGrandfather', 'brother', 'halfBrotherSameFather', 'nephewBrother', 'nephewHalfBrother', 'paternalUncle', 'fathersHalfBrother', 'sonOfPaternalUncle', 'sonOfFathersHalfBrother'].includes(heir.relationship) ||
+    const residuaryHeirs = currentHeirs.filter(heir => 
+      ['son', 'grandson', 'father', 'paternalGrandFather', 'brother', 'halfBrotherSameFather', 'nephewBrother', 'nephewHalfBrother', 'paternalUncle', 'fathersHalfBrother', 'sonOfPaternalUncle', 'sonOfFathersHalfBrother'].includes(heir.relationship) ||
       (heir.relationship === 'daughter' && !calculatedShares[heir.id])
     )
 
@@ -153,6 +170,8 @@ export const FaraidCalculator_v1 = () => {
     }
 
     setShares(calculatedShares)
+    setNewMaleHeir(prev => ({ relationship: '', count: 1, key: prev.key + 1 }))
+    setNewFemaleHeir(prev => ({ relationship: '', count: 1, key: prev.key + 1 }))
   }
 
   // Method to handle sending email with calculation results
@@ -166,7 +185,6 @@ export const FaraidCalculator_v1 = () => {
     })
   }
 
-export default function Home() {
   return (
     <div className="container mx-auto p-4">
       <Card className="mb-6">
@@ -196,7 +214,10 @@ export default function Home() {
           <div className="mb-4">
             <Label>Add Male Heirs</Label>
             <div className="flex gap-2 mb-2">
-              <Select onValueChange={(value) => setNewMaleHeir({...newMaleHeir, relationship: value})}>
+              <Select 
+                key={newMaleHeir.key}
+                onValueChange={(value) => setNewMaleHeir(prev => ({...prev, relationship: value}))}
+              >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Select Male Heir" />
                 </SelectTrigger>
@@ -209,20 +230,20 @@ export default function Home() {
               <Input
                 type="number"
                 value={newMaleHeir.count}
-                onChange={(e) => setNewMaleHeir({...newMaleHeir, count: Number(e.target.value)})}
+                onChange={(e) => setNewMaleHeir(prev => ({...prev, count: Number(e.target.value) }))}
                 placeholder="Count"
                 className="w-[100px]"
               />
-              <Button onClick={() => {
-                addHeir(newMaleHeir)
-                setNewMaleHeir({ relationship: '', count: 1 })
-              }}>Add</Button>
+              <Button onClick={() => addHeir(newMaleHeir)}>Add</Button>
             </div>
           </div>
           <div className="mb-4">
             <Label>Add Female Heirs</Label>
             <div className="flex gap-2 mb-2">
-              <Select onValueChange={(value) => setNewFemaleHeir({...newFemaleHeir, relationship: value})}>
+              <Select 
+                key={newFemaleHeir.key}
+                onValueChange={(value) => setNewFemaleHeir(prev => ({...prev, relationship: value}))}
+              >
                 <SelectTrigger className="w-[200px]">
                   <SelectValue placeholder="Select Female Heir" />
                 </SelectTrigger>
@@ -235,14 +256,11 @@ export default function Home() {
               <Input
                 type="number"
                 value={newFemaleHeir.count}
-                onChange={(e) => setNewFemaleHeir({...newFemaleHeir, count: Number(e.target.value)})}
+                onChange={(e) => setNewFemaleHeir(prev => ({...prev, count: Number(e.target.value)}))}
                 placeholder="Count"
                 className="w-[100px]"
               />
-              <Button onClick={() => {
-                addHeir(newFemaleHeir)
-                setNewFemaleHeir({ relationship: '', count: 1 })
-              }}>Add</Button>
+              <Button onClick={() => addHeir(newFemaleHeir)}>Add</Button>
             </div>
           </div>
           <div className="mb-4">
@@ -265,7 +283,7 @@ export default function Home() {
               ))}
             </ul>
           </div>
-          <Button onClick={calculateShares}>Calculate Shares</Button>
+          <Button onClick={() => calculateShares()}>Calculate Shares</Button>
         </CardContent>
       </Card>
       {Object.keys(shares).length > 0 && (
@@ -301,7 +319,6 @@ export default function Home() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                
                 placeholder="Enter your email"
               />
               <Button onClick={sendEmail}>Send Email</Button>
@@ -310,5 +327,7 @@ export default function Home() {
         </Card>
       )}
     </div>
-  );
+  )
 }
+
+export default FaraidCalculator
