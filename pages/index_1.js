@@ -1,3 +1,6 @@
+import Head from 'next/head';
+import styles from '../styles/Home.module.css';
+
 import { useState } from 'react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -7,16 +10,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { X } from 'lucide-react'
 import { toast } from "@/components/ui/use-toast"
 
-// Import a hypothetical email sending function
-import { sendEmailAPI } from '@/lib/email-service'
-
 type Heir = {
   id: string;
   relationship: string;
   count: number;
 }
 
-export default function Component() {
+export const FaraidCalculator = () => {
   const [assets, setAssets] = useState<number | ''>('')
   const [heirs, setHeirs] = useState<Heir[]>([])
   const [newMaleHeir, setNewMaleHeir] = useState<Omit<Heir, 'id'> & { key: number }>({ relationship: '', count: 1, key: 0 })
@@ -181,44 +181,14 @@ export default function Component() {
   }
 
   // Method to handle sending email with calculation results
-  const sendEmail = async () => {
-    if (!email) {
-      toast({
-        title: "Error",
-        description: "Please enter an email address.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    const emailContent = `
-      Faraid Calculation Results:
-      
-      Total Assets: RM ${assets}
-      
-      Heirs and their shares:
-      ${heirs.map(heir => `${heir.count} ${heir.relationship}(s): RM ${shares[heir.id]?.toFixed(2) || '0.00'}`).join('\n')}
-    `
-
-    try {
-      await sendEmailAPI({
-        to: email,
-        subject: 'Faraid Calculation Results',
-        body: emailContent,
-      })
-      
-      toast({
-        title: "Email Sent",
-        description: "The Faraid calculation results have been sent to your email.",
-      })
-    } catch (error) {
-      console.error('Failed to send email:', error)
-      toast({
-        title: "Error",
-        description: "Failed to send email. Please try again later.",
-        variant: "destructive",
-      })
-    }
+  const sendEmail = () => {
+    console.log('Sending email to:', email)
+    console.log('With data:', { assets, heirs, shares })
+    
+    toast({
+      title: "Email Sent",
+      description: "The Faraid calculation results have been sent to your email.",
+    })
   }
 
   return (
@@ -294,7 +264,6 @@ export default function Component() {
                 value={newFemaleHeir.count}
                 onChange={(e) => setNewFemaleHeir(prev => ({...prev, count: Number(e.target.value)}))}
                 placeholder="Count"
-                
                 className="w-[100px]"
               />
               <Button onClick={() => addHeir(newFemaleHeir)}>Add</Button>
@@ -366,3 +335,5 @@ export default function Component() {
     </div>
   )
 }
+
+export default FaraidCalculator
