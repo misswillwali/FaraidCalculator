@@ -1,14 +1,14 @@
 import Head from 'next/head';
 import styles from '../styles/Home.module.css';
 
-import { useState } from 'react'
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { X } from 'lucide-react'
-import { toast } from "@/components/ui/use-toast"
+  // import { useState } from 'react'
+  // import { Button } from "@/components/ui/button"
+  // import { Input } from "@/components/ui/input"
+  // import { Label } from "@/components/ui/label"
+  // import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+  // import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+  // import { X } from 'lucide-react'
+  // import { toast } from "@/components/ui/use-toast"
 
 type Heir = {
   id: string;
